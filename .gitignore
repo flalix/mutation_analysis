@@ -152,6 +152,8 @@ venv.bak/
 
 refs/
 spliceai_staging/
+backup/
+
 
 # Spyder project settings
 .spyderproject

@@ -1,8 +1,6 @@
 # SMART — Somatic Mutation Annotation and Reporting Tool <a href="#"><img src="assets/SMART_logo_docker.png" align="right" height="120"/></a>
 
-This is a SMART study project - forcked from 
-
-https://github.com/WeTGI-colab/SMART
+This is an study related to the SMART project - forked from https://github.com/WeTGI-colab/SMART
 
 <p align="center"><em>A Dockerised pipeline for somatic variant annotation, filtration, and clinical reporting.</em></p>
 
@@ -98,6 +96,12 @@ This logic applies to both SNV/indel and CNA variants, ensuring consistent gene 
 - **Docker** (v20.10+ or Docker Desktop)
 - **OncoKB API token** — obtain from [oncokb.org](https://www.oncokb.org)
 - **Reference files** downloaded and organised (see below)
+
+
+### OncoKB
+
+OncoKB™ is a precision oncology knowledge base maintained by Memorial Sloan Kettering Cancer Center (MSK). MSK may, from time to time, update the content on https://www.oncokb.org ("Content"). MSK makes no warranties or representations, express or implied, with respect to any of the Content, including as to the present accuracy, completeness, timeliness, adequacy, or usefulness of any of the Content. By using this website, you agree that MSK will not be liable for any losses or damages arising from your use of or reliance on the Content, or other websites or information to which this website may be linked. The Content is not intended as a substitute for professional medical help, judgment or advice. A physician or other qualified health provider should always be consulted for any health problem or medical condition. Inquiries about the Content should be directed to contact@oncokb.org.
+
 
 ---
 
