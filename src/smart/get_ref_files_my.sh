@@ -505,13 +505,6 @@ mkdir_if_missing "${REF_ROOT}/SpliceAI"
 # +----------------+----------------------------------------------------+
 # # | Name           | Flavio Lichtenstein                                |
 # ....
-
-# Go to https://basespace.illumina.com and make sure you're logged in as flalix@gmail.com.
-# Open https://basespace.illumina.com/s/otSPW8hnhaZR and click Accept.
-
-# bs list projects
-# +-------------------------------------------+----------+--------------+
-# |                   Name                    |    Id    |  TotalSize   |
 # +-------------------------------------------+----------+--------------+
 # | Predicting splicing from primary sequence | 66029966 | 453078458114
 
@@ -525,6 +518,13 @@ mkdir_if_missing "${REF_ROOT}/SpliceAI"
 # bs file download --id 16534036125  -o .
 # bs file download --id 16534036127  -o .
 # bs file download --id 16534036128  -o .
+
+# Go to https://basespace.illumina.com and make sure you're logged in as flalix@gmail.com.
+# Open https://basespace.illumina.com/s/otSPW8hnhaZR and click Accept.
+
+# bs list projects
+# +-------------------------------------------+----------+--------------+
+# |                   Name                    |    Id    |  TotalSize   |
 
 
 

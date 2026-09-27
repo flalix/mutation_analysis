@@ -37,7 +37,7 @@ Run this once before building or running the Docker container.
 ### Usage
 
 ```bash
-bash src/smart/get_ref_files.sh refs
+
 # e.g.
 bash src/smart/get_ref_files.sh /Volumes/ExternalSSD
 ```

@@ -153,6 +153,9 @@ venv.bak/
 refs/
 spliceai_staging/
 backup/
+results/
+data/
+pictures/
 
 
 # Spyder project settings

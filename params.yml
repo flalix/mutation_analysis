@@ -1,0 +1,72 @@
+project_list: ['mutation-analysis',]
+s_project_list: ['mutation-analysis', ]
+i_project: 0
+
+gene_protein: 'gene'
+s_omics: 'RNA-Seq'
+
+has_age: False
+has_gender: False
+
+exp_normalization: False
+
+LFC_cut_inf: 0.4
+s_pathw_enrichm_method: 'enricher'
+ptw_min_num_of_degs_cut: 3
+
+enr_db_list: ['Reactome_Pathways_2024']
+
+tolerance_pPMI: 0.15
+pPMI_normalized: False
+type_sat_ptw_index: 'linear_sat'
+saturation_lfc_param: 5
+
+pval_pathway_cutoff: 0.05
+fdr_pathway_cutoff: .05
+num_of_genes_cutoff: 3
+
+case_list: ['Tumor']
+s_len_case: 5
+case_sel_list: ['Tumor']
+dic_case_list: {'Tumor': 'Tumor'}
+
+std_filename: True
+std_filename_list: [ [] ]
+
+min_lfc_modulation: 0.4
+num_of_genes_list: [3]
+
+n_sentences: 5
+run_list: ['run01', 'run02', 'run03']
+i_dfp_list: [0, 1, 2, 3]
+chosen_model_list: [1,3]
+chosen_model_sampling: 3
+
+terms1_param: ["OR", 'CANCER']
+terms2_param: []
+terms_not_param: ['NOT', 'COVID', 'SARS-CoV']
+connective_param: 'AND'
+
+# CAP: community-acquired pneumonia
+# MV: mechanical ventilator
+remove_synonym_list:  ['CAP', 'MV', 'MDB']
+inidate: "1980/01/01"
+enddate: "2030/12/31"
+
+verbose_query: False
+force_query  : False
+
+sleep_entrez: [5, 7, 10]
+retmax: 100000
+
+try_all_text: True
+text_quote: ''
+dec_ncpus: 2
+
+sleep_TIKA: [10, 20, 30]
+min_words_text: 100
+
+
+
+
+

@@ -1,5 +1,5 @@
 [project]
-name = "mutation analysis - Smart study"
+name = "mutation_analysis"
 version = "0.1.0"
 description = "SMART environment (converted from conda environment.yml)"
 readme = "README.md"
@@ -13,18 +13,17 @@ dependencies = [
     "python-dateutil==2.9.0.post0",
     "pytz==2025.2",
     "tzdata==2025.2",
-
+    "pyyaml>=6.0",
     # --- plotting ---
     "matplotlib==3.10.6",
     "seaborn==0.13.2",
+    "scipy",
     "plotly==6.5.0",
     "kaleido==1.2.0",
     "narwhals==2.7.0",
     "pillow==12.0.0",
-
     # --- genomics (PyPI wheels bundle htslib) ---
     "cyvcf2==0.31.1",
-
     # --- CLI / logging / IO ---
     "click==8.3.1",
     "coloredlogs==15.0.1",
@@ -33,6 +32,8 @@ dependencies = [
     "urllib3==1.26.8",
     "orjson==3.11.6",
     "simplejson==3.20.2",
+    "dotenv>=0.9.9",
+    "ipykernel",
 ]
 
 [dependency-groups]
