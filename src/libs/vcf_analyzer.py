@@ -276,14 +276,41 @@ def missing_filter_tags(expr: str, h: Header) -> list[str]:
     return missing
 
 
-def prepare(bt: Bcftools, vcf: str, work: Path, args, h: Header) -> Path:
-    """Filter (PASS / -i expression), split multi-allelics, optionally check REF, write indexed BCF.
+def prepare(bt: Bcftools, vcf: str, work_dir: Path, args, h: Header) -> Path:
+    """
+    Filter (PASS / -i expression), split multi-allelics, optionally check REF, write indexed BCF.
     Files that don't define a tag used in --include (e.g. a CNV VCF without FORMAT/DP) are
-    processed without that filter, with a warning, instead of failing."""
-    out = work / "normalized.bcf"
+    processed without that filter, with a warning, instead of failing.
+
+    CLI:
+    bcftools view -Ou --threads 2 -f PASS,. -i 'FMT/DP>=20' -r chr17 input.vcf.gz \
+  | bcftools norm -m -any -Ob -o normalized.bcf --threads 2 -f hg38.fa --check-ref w -
+
+    bcftools index -f normalized.bcf
+    """
+
+    out = work_dir / "normalized.bcf"
+
+    # -Ou writes uncompressed BCF, the binary form of VCF. 
+    # # That's the fastest format for passing data straight into another bcftools command, because nothing gets compressed and then decompressed.
+    # --threads N adds extra threads for compressing and decompressing. It doesn't speed up the filtering itself.
     view = ["view", "-Ou", "--threads", str(bt.threads)]
+
+    '''
+    -f filters on the FILTER column.
+    PASS,. keeps records whose FILTER is PASS 
+    or . (missing, meaning no filter was applied). 
+    Records flagged by the caller, such as LowQual or weak_evidence, are dropped. view += [...] appends to the list.
+    '''
     if args.pass_only:
         view += ["-f", "PASS,."]
+
+    '''
+    include="FMT/DP>=20"
+    this first checks it against the file's header. missing_filter_tags looks for every INFO/X, FMT/X or FORMAT/X 
+    in the expression and returns those this VCF doesn't define.
+    '''
+
     if args.include:
         missing = missing_filter_tags(args.include, h)
         if missing:
@@ -291,22 +318,79 @@ def prepare(bt: Bcftools, vcf: str, work: Path, args, h: Header) -> Path:
                   f"skipping filter '{args.include}' for this file")
         else:
             view += ["-i", args.include]
+
+    '''
+    -r chr17:7661779-7687538 restricts output to a region.
+    With an index, bcftools jumps straight to that region instead of scanning the whole file.
+    regions usually None, but can be specified
+    '''
     if args.regions:
         view += ["-r", args.regions]
-        vcf = _indexed(bt, vcf, work)
+        vcf = _indexed(bt, vcf, work_dir)
+
+    '''
+        Builds the second command, bcftools norm:
+
+        -m -any splits multi-allelic records. 
+          - A site with ALT=T,G becomes two records, one per ALT, which is why each row in records.tsv has exactly one ALT.
+          - The - means split, as opposed to +, which merges; any applies it to SNVs and indels alike.
+        -Ob writes compressed BCF, small on disk and fast to read back.
+        -o out sets the output path, <root_results>/<vcf_name>/normalized.bcf.
+    '''
     norm = ["norm", "-m", "-any", "-Ob", "-o", str(out), "--threads", str(bt.threads)]
+
+    '''
+    ref: usually is None
+
+    Only runs if you passed a reference FASTA, which must be indexed with samtools faidx:
+
+    -f hg38.fa turns on indel normalization.
+       Indels are left-aligned and trimmed to a minimal form, so the same variant written differently by two callers ends up identical. 
+       Without -f, norm only splits records.
+
+    --check-ref w compares every REF allele with the FASTA and warns about mismatches, 
+       but keeps going. Other modes are e (stop at the first mismatch), x (exclude bad records) and 
+       s (fix REF from the FASTA). Symbolic alleles with REF N will produce warnings here, which is harmless.
+
+    '''
     if args.ref:
         norm += ["-f", args.ref, "--check-ref", "w"]  # warn about REF mismatches, keep going
+
+    '''
+        Runs the two commands, feeding the output of view into norm:
+
+        The input file goes last in the view command.
+        - tells norm to read from standard input (the pipe) instead of a file.
+        Nothing is written between the two steps, which is faster and uses no extra disk.
+
+         
+    '''
     bt.pipe(view + [vcf], norm + ["-"])
+
+    '''
+    bt.pipe raises BcftoolsError if either command fails. run() catches it and prints [skip] … for that file.
+
+    Indexes the result, 
+      - which creates normalized.bcf.csi. 
+      - For BCF the default index type is CSI (Coordinate-Sorted Index. It's an index file (.csi))
+      - -f overwrites an old index left over from a previous run.
+      - With the index in place, later bcftools stats and bcftools query calls, and any region queries you run yourself, 
+      - can jump straight to a location.
+
+    Why this order: 
+      - filtering first means norm only processes records you keep, 
+      - and splitting before the Python step means every row downstream has exactly one REF and one ALT.
+    '''
     bt.run(["index", "-f", str(out)])
+    
     return out
 
 
-def _indexed(bt: Bcftools, vcf: str, work: Path) -> str:
-    """Region queries need an index; if the input has none, make an indexed BCF copy in the work dir."""
+def _indexed(bt: Bcftools, vcf: str, work_dir: Path) -> str:
+    """Region queries need an index; if the input has none, make an indexed BCF copy in the work_dir."""
     if vcf.endswith((".gz", ".bcf")) and any(Path(vcf + s).exists() for s in (".tbi", ".csi")):
         return vcf
-    copy = work / "input.bcf"
+    copy = work_dir / "input.bcf"
     bt.run(["view", "-Ob", "-o", str(copy), vcf])
     bt.run(["index", "-f", str(copy)])
     return str(copy)
@@ -428,16 +512,16 @@ def somatic_calls(geno: pd.DataFrame, h: Header, min_vaf: float, max_normal_vaf:
 
 # ----------------------------------------------------------------------------- driver
 
-def analyse(bt: Bcftools, vcf: str, root_results: Path|None, args) -> dict:
+def analyse(bt: Bcftools, vcf: str, root_results: Path, args) -> dict:
     name = re.sub(r"\.(vcf|bcf)(\.gz)?$", "", Path(vcf).name)
 
-    work = Path(root_results or ".") / name         # tables, txt, json, bcf -> root_results/<vcf_name>/
-    work.mkdir(parents=True, exist_ok=True)
+    work_dir = root_results / name         # tables, txt, json, bcf -> root_results/<vcf_name>/
+    work_dir.mkdir(parents=True, exist_ok=True)
 
     h = read_header(bt, vcf)
-    bcf = prepare(bt, vcf, work, args, h)
+    bcf = prepare(bt, vcf, work_dir, args, h)
     stats_txt = bt.run(["stats", "-s", "-", str(bcf)])
-    (work / "bcftools_stats.txt").write_text(stats_txt)
+    (work_dir / "bcftools_stats.txt").write_text(stats_txt)
     stats = parse_stats(stats_txt)
 
     sites, geno = query_table(bt, bcf, h)
@@ -451,7 +535,7 @@ def analyse(bt: Bcftools, vcf: str, root_results: Path|None, args) -> dict:
     for df, fn in [(sites, "records"), (geno, "genotypes"), (ploidy, "ploidy"),
                    (ev, "cn_events"), (aneu, "aneuploidy"), (som, "somatic")]:
         if not df.empty:
-            df.to_csv(work / f"{fn}.tsv", sep="\t", index=False)
+            df.to_csv(work_dir / f"{fn}.tsv", sep="\t", index=False)
 
     summary = {
         "file": vcf, "fileformat": h.fileformat, "samples": h.samples,
@@ -471,7 +555,8 @@ def analyse(bt: Bcftools, vcf: str, root_results: Path|None, args) -> dict:
             lambda r: f"{r.SAMPLE}:{r.CHROM}:{r.call}", axis=1).tolist() if not aneu.empty else [],
         "somatic_calls": int(som.SOMATIC_CALL.sum()) if not som.empty else None,
     }
-    (work / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
+
+    (work_dir / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
     return {"summary": summary, "sites": sites, "cn": ev, "contigs": h.contigs}
 
 
@@ -582,11 +667,17 @@ def summary_table(results: list[dict]) -> pd.DataFrame:
 
 
 def run(vcfs:list, bcftools:str, ref:Path|str|None=None, include:str|None=None,
-        regions:Path|str|None=None, pass_only:bool=False, baseline_ploidy:int=2,
+        regions:Path|str|None=None, pass_only:bool=True, baseline_ploidy:int=2,
         min_vaf:float=0.05, max_normal_vaf:float=0.02, threads:int=2, no_plots:bool=False,
-        root_results:Path|str|None=None, root_figure:Path|str|None=None, 
+        root_results:Path|str='.', root_figure:Path|str='.', 
         figname_classes:str|None=None, figname_cn:str|None=None, dpi:int=150):
-    
+
+    if root_results is None or str(root_results) == '.' or str(root_results) == '':
+        ValueError("Define root_results.")
+
+    if root_figure is None or str(root_figure) == '.' or str(root_figure) == '':
+        ValueError("Define root_figure.")
+
     args = SimpleNamespace(
         vcf=[str(v) for v in vcfs], bcftools=bcftools, ref=ref,
         include=include, regions=regions, pass_only=pass_only,
@@ -595,8 +686,8 @@ def run(vcfs:list, bcftools:str, ref:Path|str|None=None, include:str|None=None,
     )
 
     bt = Bcftools(args.bcftools, args.threads)
-    root_results = Path(root_results) if root_results else Path(".")   # tables / txt / json
-    root_figure = Path(root_figure) if root_figure else root_results    # png / jpeg
+    root_results = Path(root_results)   # tables / txt / json
+    root_figure = Path(root_figure)     # png / jpeg
     root_results.mkdir(parents=True, exist_ok=True)
     root_figure.mkdir(parents=True, exist_ok=True)
 
