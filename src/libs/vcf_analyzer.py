@@ -6,7 +6,7 @@ bcftools does the heavy lifting (filtering, splitting multi-allelics, optional
 REF check against a FASTA, stats, field extraction); Python classifies variants
 and summarises genotypes, allele fractions, ploidy, copy number and aneuploidy.
 
-What it reports, per input file (outdir/<vcf_name>/):
+What it reports, per input file (root_results/<vcf_name>/):
   bcftools_stats.txt   raw `bcftools stats -s -` output
   records.tsv          one row per (split) record: class, size, scale, flags
   genotypes.tsv        one row per record x sample: GT, ploidy, dosage, zygosity, VAF, CN
@@ -15,19 +15,21 @@ What it reports, per input file (outdir/<vcf_name>/):
   aneuploidy.tsv       per-sample x chromosome fraction gained/lost -> whole-chrom / arm calls
   somatic.tsv          tumor-vs-normal calls, when a tumor/normal pair is detected
   summary.json         headline numbers
-And across all inputs (outdir/):
-  summary.tsv, variant_classes.png, copy_number.png
+And across all inputs:
+  root_results/summary.tsv
+  root_figure/variant_classes.png, root_figure/copy_number.png  (extension sets the format: .png, .jpg, .pdf)
 
-Usage:
-  python vcf_analyzer.py sample.vcf.gz
-  python vcf_analyzer.py *.vcf -o results --pass-only --ref hg38.fa
-  python vcf_analyzer.py tumor.vcf.gz -i 'QUAL>30 && INFO/DP>10' --baseline-ploidy 4
+Usage (from Python / Jupyter):
+  from vcf_analyzer import run
+  res = run(vcfs=["sample.vcf.gz"], bcftools="/usr/local/bin/bcftools",
+            root_results="results", root_figure="pictures")
+  res = run(vcfs=vcfs, bcftools="bcftools", root_results="results", root_figure="pictures", pass_only=True,
+            include="FMT/DP>=20", ref="hg38.fa", baseline_ploidy=4)
 
-Requires: bcftools on PATH (or --bcftools), pandas; matplotlib for plots.
+Requires: bcftools on PATH (or bcftools=...), pandas; matplotlib for plots.
 """
 from __future__ import annotations
 
-import argparse
 import json
 import re
 import shutil
@@ -261,14 +263,34 @@ SITE_INFO = ["END", "SVTYPE", "SVLEN", "GENE", "RU", "SOMATIC"]
 SAMPLE_FMT = ["GT", "AD", "DP", "AF", "CN", "MCN"]
 
 
-def prepare(bt: Bcftools, vcf: str, work: Path, args) -> Path:
-    """Filter (PASS / -i expression), split multi-allelics, optionally check REF, write indexed BCF."""
+TAG_REF = re.compile(r"\b(INFO|FMT|FORMAT)/(\w+)")
+
+
+def missing_filter_tags(expr: str, h: Header) -> list[str]:
+    """Tags used as INFO/X or FMT/X in a bcftools expression that this file's header does not define."""
+    missing = []
+    for kind, tag in TAG_REF.findall(expr):
+        defined = h.info if kind == "INFO" else h.fmt
+        if tag not in defined:
+            missing.append(f"{kind}/{tag}")
+    return missing
+
+
+def prepare(bt: Bcftools, vcf: str, work: Path, args, h: Header) -> Path:
+    """Filter (PASS / -i expression), split multi-allelics, optionally check REF, write indexed BCF.
+    Files that don't define a tag used in --include (e.g. a CNV VCF without FORMAT/DP) are
+    processed without that filter, with a warning, instead of failing."""
     out = work / "normalized.bcf"
     view = ["view", "-Ou", "--threads", str(bt.threads)]
     if args.pass_only:
         view += ["-f", "PASS,."]
     if args.include:
-        view += ["-i", args.include]
+        missing = missing_filter_tags(args.include, h)
+        if missing:
+            print(f"[warn] {Path(vcf).name}: {', '.join(missing)} not in header; "
+                  f"skipping filter '{args.include}' for this file")
+        else:
+            view += ["-i", args.include]
     if args.regions:
         view += ["-r", args.regions]
         vcf = _indexed(bt, vcf, work)
@@ -406,13 +428,14 @@ def somatic_calls(geno: pd.DataFrame, h: Header, min_vaf: float, max_normal_vaf:
 
 # ----------------------------------------------------------------------------- driver
 
-def analyse(bt: Bcftools, vcf: str, outdir: Path, args) -> dict:
+def analyse(bt: Bcftools, vcf: str, root_results: Path|None, args) -> dict:
     name = re.sub(r"\.(vcf|bcf)(\.gz)?$", "", Path(vcf).name)
-    work = outdir / name
+
+    work = Path(root_results or ".") / name         # tables, txt, json, bcf -> root_results/<vcf_name>/
     work.mkdir(parents=True, exist_ok=True)
 
     h = read_header(bt, vcf)
-    bcf = prepare(bt, vcf, work, args)
+    bcf = prepare(bt, vcf, work, args, h)
     stats_txt = bt.run(["stats", "-s", "-", str(bcf)])
     (work / "bcftools_stats.txt").write_text(stats_txt)
     stats = parse_stats(stats_txt)
@@ -467,7 +490,7 @@ def _style(ax):
     ax.tick_params(colors=INK2, labelsize=9)
 
 
-def plot_classes(results: list[dict], out: Path):
+def plot_classes(results: list[dict], figname: str|None=None, root_figure: Path|None=None, dpi:int=150):
     import matplotlib.pyplot as plt
     counts = pd.concat([r["sites"]["CLASS"] for r in results if not r["sites"].empty]).value_counts()
     if counts.empty:
@@ -483,11 +506,15 @@ def plot_classes(results: list[dict], out: Path):
     ax.xaxis.grid(True, color=GRID, lw=0.8)
     ax.set_axisbelow(True)
     fig.tight_layout()
-    fig.savefig(out, dpi=150)
+
+    if root_figure and figname:
+        fig.savefig(root_figure / figname, dpi=dpi)
+
+    plt.show()
     plt.close(fig)
 
 
-def plot_copy_number(results: list[dict], out: Path, base: int):
+def plot_copy_number(results: list[dict], base: int, figname: str|None=None, root_figure: Path|None=None, dpi:int=150):
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     from matplotlib.ticker import MaxNLocator
@@ -530,34 +557,61 @@ def plot_copy_number(results: list[dict], out: Path, base: int):
     fig.legend(handles=handles, loc="upper right", ncol=4, frameon=False, fontsize=8, labelcolor=INK2)
     fig.suptitle("Copy-number events by sample", x=0.01, ha="left", color=INK, fontsize=12)
     fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(out, dpi=150)
+
+    if root_figure and figname:
+        fig.savefig(root_figure / figname, dpi=dpi)
+
+    plt.show()
     plt.close(fig)
 
 
-def run(vcfs:list, outdir:Path, bcftools:str, ref:Path|str|None=None, include:str|None=None,
+def summary_table(results: list[dict]) -> pd.DataFrame:
+    """One row per input file, from each file's summary dict."""
+    rows = []
+    for r in results:
+        s = r["summary"]
+        rows.append({"file": Path(s["file"]).name, "records": s["records_after_filters"],
+                     "samples": len(s["samples"]),
+                     "classes": ", ".join(f"{k}:{v}" for k, v in s["variant_classes"].items()),
+                     "ts_tv": s["ts_tv"], "msi_indels": s["msi_slippage_indels"],
+                     "repeat_expansions": s["repeat_expansions"],
+                     "ploidy": ", ".join(f"{k}:{v}" for k, v in s["dominant_ploidy"].items()),
+                     "aneuploidy": "; ".join(s["aneuploid_chromosomes"] + s["arm_level_events"]),
+                     "somatic_calls": s["somatic_calls"]})
+    return pd.DataFrame(rows)
+
+
+def run(vcfs:list, bcftools:str, ref:Path|str|None=None, include:str|None=None,
         regions:Path|str|None=None, pass_only:bool=False, baseline_ploidy:int=2,
-        min_vaf:float=0.05, max_normal_vaf:float=0.02, threads:int=2, no_plots:bool=False):
+        min_vaf:float=0.05, max_normal_vaf:float=0.02, threads:int=2, no_plots:bool=False,
+        root_results:Path|str|None=None, root_figure:Path|str|None=None, 
+        figname_classes:str|None=None, figname_cn:str|None=None, dpi:int=150):
     
     args = SimpleNamespace(
-        vcf=[str(v) for v in vcfs], outdir=outdir, bcftools=bcftools, ref=ref,
+        vcf=[str(v) for v in vcfs], bcftools=bcftools, ref=ref,
         include=include, regions=regions, pass_only=pass_only,
         baseline_ploidy=baseline_ploidy, min_vaf=min_vaf,
         max_normal_vaf=max_normal_vaf, threads=threads, no_plots=no_plots,
     )
 
     bt = Bcftools(args.bcftools, args.threads)
-    out = Path(args.outdir)
-    out.mkdir(parents=True, exist_ok=True)
+    root_results = Path(root_results) if root_results else Path(".")   # tables / txt / json
+    root_figure = Path(root_figure) if root_figure else root_results    # png / jpeg
+    root_results.mkdir(parents=True, exist_ok=True)
+    root_figure.mkdir(parents=True, exist_ok=True)
 
     results = []
     for vcf in args.vcf:
         try:
-            results.append(analyse(bt, vcf, out, args))
+            results.append(analyse(bt, vcf, root_results, args))   # tables -> root_results/<vcf_name>/
         except BcftoolsError as e:
             print(f"[skip] {vcf}: {e}")
 
+    if results:
+        summary_table(results).to_csv(root_results / "summary.tsv", sep="\t", index=False)
+
     if results and not args.no_plots:
-        plot_classes(results, out / "variant_classes.png")
-        plot_copy_number(results, out / "copy_number.png", args.baseline_ploidy)
+        plot_classes(results, root_figure=root_figure, figname=figname_classes, dpi=dpi)
+        plot_copy_number(results, args.baseline_ploidy, root_figure=root_figure, figname=figname_cn, dpi=dpi)
     return results
 

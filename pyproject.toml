@@ -52,3 +52,7 @@ packages = ["src/smart"]
 [tool.pytest.ini_options]
 timeout = 300
 testpaths = ["tests"]
+
+# tell uv not to build the project, so it only installs the dependencies:
+[tool.uv]
+package = false
