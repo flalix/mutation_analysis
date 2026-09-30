@@ -1,0 +1,11 @@
+patient,sex,status,sample,lane,fastq_1,fastq_2
+P01,XX,1,P01_T,L001,fastq/P01_T_S1_L001_R1_001.fastq.gz,fastq/P01_T_S1_L001_R2_001.fastq.gz
+P01,XX,1,P01_T,L002,fastq/P01_T_S1_L002_R1_001.fastq.gz,fastq/P01_T_S1_L002_R2_001.fastq.gz
+P01,XX,1,P01_B,L001,fastq/P01_B_S2_L001_R1_001.fastq.gz,fastq/P01_B_S2_L001_R2_001.fastq.gz
+P01,XX,1,P01_B,L002,fastq/P01_B_S2_L002_R1_001.fastq.gz,fastq/P01_B_S2_L002_R2_001.fastq.gz
+P01,XX,0,P01_N,L001,fastq/P01_N_S3_L001_R1_001.fastq.gz,fastq/P01_N_S3_L001_R2_001.fastq.gz
+P02,XY,1,P02_T,L001,fastq/P02_T_S4_L001_R1_001.fastq.gz,fastq/P02_T_S4_L001_R2_001.fastq.gz
+P02,XY,1,P02_B,L001,fastq/P02_B_S5_L001_R1_001.fastq.gz,fastq/P02_B_S5_L001_R2_001.fastq.gz
+P02,XY,0,P02_N,L001,fastq/P02_N_S6_L001_R1_001.fastq.gz,fastq/P02_N_S6_L001_R2_001.fastq.gz
+GTEX-DONOR01,XY,0,GTEX-DONOR01,L001,fastq/GTEX-DONOR01_L001_R1.fastq.gz,fastq/GTEX-DONOR01_L001_R2.fastq.gz
+GTEX-DONOR02,XX,0,GTEX-DONOR02,L001,fastq/GTEX-DONOR02_L001_R1.fastq.gz,fastq/GTEX-DONOR02_L001_R2.fastq.gz
