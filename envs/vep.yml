@@ -1,0 +1,8 @@
+# Ensembl VEP (pins its own Perl/htslib, so kept separate).
+# The cache (~20 GB for GRCh38) is downloaded by setup_envs.sh --vep-cache.
+name: vep
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - ensembl-vep

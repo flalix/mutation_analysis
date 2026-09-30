@@ -1,0 +1,9 @@
+# Manta (SVs) and Strelka2 (SNV/indel). Both need Python 2.7, so they live apart.
+# The pipeline calls them with `conda run -n manta ...`; no need to activate.
+name: manta
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - manta
+  - strelka

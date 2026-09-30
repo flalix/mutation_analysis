@@ -13,7 +13,8 @@ Groups (samplesheet_prostate.csv):
   N  blood (germline control for everyone)
 
 Clinical filter (clinical_prostate.csv): cancer patients are kept only if
-ISUP grade group is 2 or 3 and M == M0 (use --pN0 to also require pN0).
+ISUP grade group is 2 or 3 (worst tumour region); metastatic status is not
+filtered (use --pN0 to require node-negative).
 Fill the sheet from the EGA/ICGC clinical metadata; NA excludes the patient
 unless --allow-missing-clinical is given (useful for dry runs).
 
@@ -28,11 +29,24 @@ from __future__ import annotations
 
 import argparse
 import csv
+import os
 import shlex
+import signal
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+
+
+def find_input(p: Path, flag: str) -> Path:
+    """Resolve an input file: as given (relative to the current directory),
+    else next to this script. Absolute path returned, so --workdir is safe."""
+    for cand in (p, SCRIPT_DIR / p.name):
+        if cand.exists():
+            return cand.resolve()
+    sys.exit(f"{flag}: '{p}' not found (looked in {Path.cwd()} and {SCRIPT_DIR})")
 
 # ---------------------------------------------------------------------------
 # configuration
@@ -118,8 +132,8 @@ def select_patients(samples: dict[str, Sample], clinical: Path,
             continue
         c = clin.get(pt, {})
         gg, m, pn = c.get("isup_grade_group", "NA"), c.get("M", "NA"), c.get("pN", "NA")
-        missing = "NA" in (gg, m) or (require_pn0 and pn == "NA")
-        ok = (gg in KEEP_GRADE_GROUPS and m == "M0" and (not require_pn0 or pn == "pN0"))
+        missing = gg == "NA" or (require_pn0 and pn == "NA")
+        ok = gg in KEEP_GRADE_GROUPS and (not require_pn0 or pn == "pN0")
         if ok or (missing and allow_missing):
             keep.add(pt)
             if missing:
@@ -174,6 +188,17 @@ class Runner:
         if self.execute:
             for p in paths:
                 Path(p).mkdir(parents=True, exist_ok=True)
+
+
+# tools that live in their own conda environments (see envs/*.yml)
+MANTA_ENV = "manta"     # Manta + Strelka2 (Python 2.7)
+ASCAT_ENV = "ascat"     # R + ASCAT + alleleCounter
+VEP_ENV = "vep"         # Ensembl VEP
+
+
+def in_env(env: str, *cmd) -> list[str]:
+    """Run a command inside another conda env without activating it."""
+    return ["conda", "run", "--no-capture-output", "-n", env, *map(str, cmd)]
 
 
 def gatk(tool: str, *args) -> list[str]:
@@ -357,14 +382,14 @@ def sv(r: Runner, case: str, normal: str):
     d = Path("sv") / case
     T, N = bqsr_bam(case), bqsr_bam(normal)
     r.mkdir(d)
-    r.run(["configManta.py", "--normalBam", N, "--tumorBam", T, "--referenceFasta", REF,
-           "--runDir", d / "manta"])
-    r.run([d / "manta/runWorkflow.py", "-m", "local", "-j", THREADS])
-    r.run(["configureStrelkaSomaticWorkflow.py", "--normalBam", N, "--tumorBam", T,
+    r.run(in_env(MANTA_ENV, "configManta.py", "--normalBam", N, "--tumorBam", T, "--referenceFasta", REF,
+           "--runDir", d / "manta"))
+    r.run(in_env(MANTA_ENV, "python2", d / "manta/runWorkflow.py", "-m", "local", "-j", THREADS))
+    r.run(in_env(MANTA_ENV, "configureStrelkaSomaticWorkflow.py", "--normalBam", N, "--tumorBam", T,
            "--referenceFasta", REF,
            "--indelCandidates", d / "manta/results/variants/candidateSmallIndels.vcf.gz",
-           "--runDir", d / "strelka"])
-    r.run([d / "strelka/runWorkflow.py", "-m", "local", "-j", THREADS])
+           "--runDir", d / "strelka"))
+    r.run(in_env(MANTA_ENV, "python2", d / "strelka/runWorkflow.py", "-m", "local", "-j", THREADS))
     r.run(["delly", "call", "-x", DELLY_EXCL, "-g", REF, "-o", d / "delly.bcf", T, N])
     r.write(d / "delly_samples.tsv", f"{case}\ttumor\n{normal}\tcontrol\n")
     r.run(["delly", "filter", "-f", "somatic", "-s", d / "delly_samples.tsv",
@@ -405,7 +430,11 @@ write.table(data.frame(sample = tum, purity = res$aberrantcellfraction, ploidy =
 
 
 def ascat(r: Runner, case: str, normal: str):
-    r.run(["Rscript", "-", case, normal, ASCAT_REF], stdin=ASCAT_R)
+    script = Path("cnv") / "ascat_run.R"      # conda run does not forward stdin reliably
+    if not r.execute or not script.exists():
+        r.mkdir("cnv")
+        r.write(script, ASCAT_R.lstrip())
+    r.run(in_env(ASCAT_ENV, "Rscript", script, case, normal, ASCAT_REF))
 
 
 def msi(r: Runner, case: str, normal: str):
@@ -418,9 +447,9 @@ def msi(r: Runner, case: str, normal: str):
 # ---------------------------------------------------------------------------
 def annotate(r: Runner, pt: str):
     d = Path("vcf") / pt
-    r.run(["vep", "--offline", "--cache", "--dir_cache", VEP_CACHE, "--assembly", "GRCh38",
+    r.run(in_env(VEP_ENV, "vep", "--offline", "--cache", "--dir_cache", VEP_CACHE, "--assembly", "GRCh38",
            "--fasta", REF, "--everything", "--pick", "--vcf", "--compress_output", "bgzip",
-           "--fork", 8, "-i", d / "mutect2.pass.vcf.gz", "-o", d / "mutect2.pass.vep.vcf.gz"])
+           "--fork", 8, "-i", d / "mutect2.pass.vcf.gz", "-o", d / "mutect2.pass.vep.vcf.gz"))
 
 
 def drivers(r: Runner, pt: str, cases: list[str]):
@@ -602,7 +631,8 @@ def clonality(r: Runner, pt: str, cases: list[str]):
     # segments and give its purity explicitly, e.g.
     #   --sample PR01_B=cnv/PR01_T1 --purity PR01_B=0.08
     samples = [x for sm in cases for x in ("--sample", f"{sm}=cnv/{sm}")]
-    r.run([sys.executable, "make_pyclone_input.py", "--vcf", f"vcf/{pt}/mutect2.pass.vcf.gz",
+    r.run([sys.executable, SCRIPT_DIR / "make_pyclone_input.py",
+           "--vcf", f"vcf/{pt}/mutect2.pass.vcf.gz",
            *samples, "-o", f"clonality/{pt}.pyclone_in.tsv"])
     r.run(["pyclone-vi", "fit", "-i", f"clonality/{pt}.pyclone_in.tsv",
            "-o", f"clonality/{pt}.h5", "-c", 40, "-d", "beta-binomial", "-r", 10])
@@ -635,12 +665,24 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--sheet", type=Path, default=Path("samplesheet_prostate.csv"))
     ap.add_argument("--clinical", type=Path, default=Path("clinical_prostate.csv"))
+    ap.add_argument("--workdir", type=Path, default=Path("."),
+                    help="where ref/, ega/ and all outputs live (default: current dir)")
     ap.add_argument("--run", action="store_true", help="execute (default: dry run)")
     ap.add_argument("--steps", default=",".join(STEPS),
                     help=f"comma-separated subset of: fetch,{','.join(STEPS)}")
     ap.add_argument("--allow-missing-clinical", action="store_true")
     ap.add_argument("--pN0", action="store_true", help="also require pN0")
     a = ap.parse_args()
+    if hasattr(signal, "SIGPIPE"):          # quiet exit when piped into head/less
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    a.sheet = find_input(a.sheet, "--sheet")
+    a.clinical = find_input(a.clinical, "--clinical")
+    a.workdir = a.workdir.resolve()
+    if a.run:
+        a.workdir.mkdir(parents=True, exist_ok=True)
+    elif not a.workdir.is_dir():
+        sys.exit(f"--workdir {a.workdir} does not exist")
+    os.chdir(a.workdir)      # ref/, ega/, bam/, vcf/ ... are relative to workdir
 
     steps = set(a.steps.split(","))
     if unknown := steps - set(STEPS) - {"fetch"}:

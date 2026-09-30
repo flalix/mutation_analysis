@@ -1,0 +1,41 @@
+# Main environment: everything the pipeline runs directly.
+#   conda env create -f envs/wgs.yml && conda activate wgs
+# Mutect2, HaplotypeCaller, MarkDuplicates, BQSR, FilterMutectCalls ... are all in gatk4.
+name: wgs
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.11
+  # alignment, BAM/VCF handling
+  - gatk4
+  - bwa-mem2
+  - bwa                  # chrM realignment (GATK mito workflow)
+  - samtools
+  - bcftools
+  - htslib               # bgzip, tabix
+  # QC
+  - fastqc
+  - multiqc
+  - mosdepth
+  - verifybamid2
+  - somalier
+  # structural variants (Manta/Strelka are in envs/manta.yml)
+  - delly
+  - survivor
+  # MSI
+  - msisensor-pro
+  # mitochondria
+  - haplocheck
+  - haplogrep3
+  # clonality, signatures, helper scripts
+  - pyclone-vi
+  - sigprofilerassignment
+  - cyvcf2
+  - pandas
+  - numpy
+  # data access
+  - pyega3
+  - awscli
+  - wget
+  - jq

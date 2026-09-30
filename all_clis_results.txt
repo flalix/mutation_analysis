@@ -1,0 +1,568 @@
+# DRY RUN: commands are printed, nothing is executed. Add --run to execute.
+
+# excluded PR01: grade group=NA, M=NA, pN=NA
+# excluded PR02: grade group=NA, M=NA, pN=NA
+# men kept: 2 (cancer 0, healthy 2); samples: 4
+
+gatk --java-options -Xmx32g RevertSam -I ega/HP01_H.bam -O ubam/HP01_H --OUTPUT_BY_READGROUP true --SANITIZE true --SORT_ORDER queryname --RESTORE_ORIGINAL_QUALITIES true --REMOVE_DUPLICATE_INFORMATION true --REMOVE_ALIGNMENT_INFORMATION true --ATTRIBUTE_TO_CLEAR XS --ATTRIBUTE_TO_CLEAR XA --TMP_DIR tmp
+
+samtools fastq -n -0 /dev/null -s /dev/null 'ubam/HP01_H/<RG>.bam' | bwa-mem2 mem -t 16 -p -Y -K 100000000 -R '@RG\tID:<RG>\tSM:HP01_H\tLB:<LB>\tPL:ILLUMINA\tPU:<PU>' ref/Homo_sapiens_assembly38.fasta - | samtools sort -@ 4 -m 2G -o 'bam/HP01_H.<RG>.bam' -
+
+gatk --java-options -Xmx32g MarkDuplicates -I 'bam/HP01_H.<RG>.bam' -O bam/HP01_H.md.bam -M qc/HP01_H.md_metrics.txt --OPTICAL_DUPLICATE_PIXEL_DISTANCE 100 --CREATE_INDEX true
+
+gatk --java-options -Xmx32g BaseRecalibrator -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.md.bam --known-sites ref/Homo_sapiens_assembly38.dbsnp138.vcf --known-sites ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz --known-sites ref/Homo_sapiens_assembly38.known_indels.vcf.gz -O bam/HP01_H.recal.table
+
+gatk --java-options -Xmx32g ApplyBQSR -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.md.bam --bqsr-recal-file bam/HP01_H.recal.table -O bam/HP01_H.bqsr.bam
+
+mosdepth -t 4 -n --fast-mode --by 1000000 qc/HP01_H bam/HP01_H.bqsr.bam
+
+gatk --java-options -Xmx32g CollectWgsMetrics -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -O qc/HP01_H.wgs_metrics.txt
+
+gatk --java-options -Xmx32g CollectInsertSizeMetrics -I bam/HP01_H.bqsr.bam -O qc/HP01_H.insert.txt -H qc/HP01_H.insert.pdf
+
+verifybamid2 --SVDPrefix ref/verifybamid/1000g.phase3.100k.b38.vcf.gz.dat --Reference ref/Homo_sapiens_assembly38.fasta --BamFile bam/HP01_H.bqsr.bam --Output qc/HP01_H.vbid2
+
+somalier extract -d qc/somalier/ --sites ref/somalier/sites.hg38.vcf.gz -f ref/Homo_sapiens_assembly38.fasta bam/HP01_H.bqsr.bam
+
+gatk --java-options -Xmx32g RevertSam -I ega/HP01_N.bam -O ubam/HP01_N --OUTPUT_BY_READGROUP true --SANITIZE true --SORT_ORDER queryname --RESTORE_ORIGINAL_QUALITIES true --REMOVE_DUPLICATE_INFORMATION true --REMOVE_ALIGNMENT_INFORMATION true --ATTRIBUTE_TO_CLEAR XS --ATTRIBUTE_TO_CLEAR XA --TMP_DIR tmp
+
+samtools fastq -n -0 /dev/null -s /dev/null 'ubam/HP01_N/<RG>.bam' | bwa-mem2 mem -t 16 -p -Y -K 100000000 -R '@RG\tID:<RG>\tSM:HP01_N\tLB:<LB>\tPL:ILLUMINA\tPU:<PU>' ref/Homo_sapiens_assembly38.fasta - | samtools sort -@ 4 -m 2G -o 'bam/HP01_N.<RG>.bam' -
+
+gatk --java-options -Xmx32g MarkDuplicates -I 'bam/HP01_N.<RG>.bam' -O bam/HP01_N.md.bam -M qc/HP01_N.md_metrics.txt --OPTICAL_DUPLICATE_PIXEL_DISTANCE 100 --CREATE_INDEX true
+
+gatk --java-options -Xmx32g BaseRecalibrator -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_N.md.bam --known-sites ref/Homo_sapiens_assembly38.dbsnp138.vcf --known-sites ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz --known-sites ref/Homo_sapiens_assembly38.known_indels.vcf.gz -O bam/HP01_N.recal.table
+
+gatk --java-options -Xmx32g ApplyBQSR -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_N.md.bam --bqsr-recal-file bam/HP01_N.recal.table -O bam/HP01_N.bqsr.bam
+
+mosdepth -t 4 -n --fast-mode --by 1000000 qc/HP01_N bam/HP01_N.bqsr.bam
+
+gatk --java-options -Xmx32g CollectWgsMetrics -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_N.bqsr.bam -O qc/HP01_N.wgs_metrics.txt
+
+gatk --java-options -Xmx32g CollectInsertSizeMetrics -I bam/HP01_N.bqsr.bam -O qc/HP01_N.insert.txt -H qc/HP01_N.insert.pdf
+
+verifybamid2 --SVDPrefix ref/verifybamid/1000g.phase3.100k.b38.vcf.gz.dat --Reference ref/Homo_sapiens_assembly38.fasta --BamFile bam/HP01_N.bqsr.bam --Output qc/HP01_N.vbid2
+
+somalier extract -d qc/somalier/ --sites ref/somalier/sites.hg38.vcf.gz -f ref/Homo_sapiens_assembly38.fasta bam/HP01_N.bqsr.bam
+
+gatk --java-options -Xmx32g RevertSam -I ega/HP02_H.bam -O ubam/HP02_H --OUTPUT_BY_READGROUP true --SANITIZE true --SORT_ORDER queryname --RESTORE_ORIGINAL_QUALITIES true --REMOVE_DUPLICATE_INFORMATION true --REMOVE_ALIGNMENT_INFORMATION true --ATTRIBUTE_TO_CLEAR XS --ATTRIBUTE_TO_CLEAR XA --TMP_DIR tmp
+
+samtools fastq -n -0 /dev/null -s /dev/null 'ubam/HP02_H/<RG>.bam' | bwa-mem2 mem -t 16 -p -Y -K 100000000 -R '@RG\tID:<RG>\tSM:HP02_H\tLB:<LB>\tPL:ILLUMINA\tPU:<PU>' ref/Homo_sapiens_assembly38.fasta - | samtools sort -@ 4 -m 2G -o 'bam/HP02_H.<RG>.bam' -
+
+gatk --java-options -Xmx32g MarkDuplicates -I 'bam/HP02_H.<RG>.bam' -O bam/HP02_H.md.bam -M qc/HP02_H.md_metrics.txt --OPTICAL_DUPLICATE_PIXEL_DISTANCE 100 --CREATE_INDEX true
+
+gatk --java-options -Xmx32g BaseRecalibrator -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.md.bam --known-sites ref/Homo_sapiens_assembly38.dbsnp138.vcf --known-sites ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz --known-sites ref/Homo_sapiens_assembly38.known_indels.vcf.gz -O bam/HP02_H.recal.table
+
+gatk --java-options -Xmx32g ApplyBQSR -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.md.bam --bqsr-recal-file bam/HP02_H.recal.table -O bam/HP02_H.bqsr.bam
+
+mosdepth -t 4 -n --fast-mode --by 1000000 qc/HP02_H bam/HP02_H.bqsr.bam
+
+gatk --java-options -Xmx32g CollectWgsMetrics -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -O qc/HP02_H.wgs_metrics.txt
+
+gatk --java-options -Xmx32g CollectInsertSizeMetrics -I bam/HP02_H.bqsr.bam -O qc/HP02_H.insert.txt -H qc/HP02_H.insert.pdf
+
+verifybamid2 --SVDPrefix ref/verifybamid/1000g.phase3.100k.b38.vcf.gz.dat --Reference ref/Homo_sapiens_assembly38.fasta --BamFile bam/HP02_H.bqsr.bam --Output qc/HP02_H.vbid2
+
+somalier extract -d qc/somalier/ --sites ref/somalier/sites.hg38.vcf.gz -f ref/Homo_sapiens_assembly38.fasta bam/HP02_H.bqsr.bam
+
+gatk --java-options -Xmx32g RevertSam -I ega/HP02_N.bam -O ubam/HP02_N --OUTPUT_BY_READGROUP true --SANITIZE true --SORT_ORDER queryname --RESTORE_ORIGINAL_QUALITIES true --REMOVE_DUPLICATE_INFORMATION true --REMOVE_ALIGNMENT_INFORMATION true --ATTRIBUTE_TO_CLEAR XS --ATTRIBUTE_TO_CLEAR XA --TMP_DIR tmp
+
+samtools fastq -n -0 /dev/null -s /dev/null 'ubam/HP02_N/<RG>.bam' | bwa-mem2 mem -t 16 -p -Y -K 100000000 -R '@RG\tID:<RG>\tSM:HP02_N\tLB:<LB>\tPL:ILLUMINA\tPU:<PU>' ref/Homo_sapiens_assembly38.fasta - | samtools sort -@ 4 -m 2G -o 'bam/HP02_N.<RG>.bam' -
+
+gatk --java-options -Xmx32g MarkDuplicates -I 'bam/HP02_N.<RG>.bam' -O bam/HP02_N.md.bam -M qc/HP02_N.md_metrics.txt --OPTICAL_DUPLICATE_PIXEL_DISTANCE 100 --CREATE_INDEX true
+
+gatk --java-options -Xmx32g BaseRecalibrator -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_N.md.bam --known-sites ref/Homo_sapiens_assembly38.dbsnp138.vcf --known-sites ref/Mills_and_1000G_gold_standard.indels.hg38.vcf.gz --known-sites ref/Homo_sapiens_assembly38.known_indels.vcf.gz -O bam/HP02_N.recal.table
+
+gatk --java-options -Xmx32g ApplyBQSR -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_N.md.bam --bqsr-recal-file bam/HP02_N.recal.table -O bam/HP02_N.bqsr.bam
+
+mosdepth -t 4 -n --fast-mode --by 1000000 qc/HP02_N bam/HP02_N.bqsr.bam
+
+gatk --java-options -Xmx32g CollectWgsMetrics -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_N.bqsr.bam -O qc/HP02_N.wgs_metrics.txt
+
+gatk --java-options -Xmx32g CollectInsertSizeMetrics -I bam/HP02_N.bqsr.bam -O qc/HP02_N.insert.txt -H qc/HP02_N.insert.pdf
+
+verifybamid2 --SVDPrefix ref/verifybamid/1000g.phase3.100k.b38.vcf.gz.dat --Reference ref/Homo_sapiens_assembly38.fasta --BamFile bam/HP02_N.bqsr.bam --Output qc/HP02_N.vbid2
+
+somalier extract -d qc/somalier/ --sites ref/somalier/sites.hg38.vcf.gz -f ref/Homo_sapiens_assembly38.fasta bam/HP02_N.bqsr.bam
+
+somalier relate --infer -o qc/somalier_relate qc/somalier/HP01_H.somalier qc/somalier/HP01_N.somalier qc/somalier/HP02_H.somalier qc/somalier/HP02_N.somalier
+
+gatk --java-options -Xmx32g HaplotypeCaller -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_N.bqsr.bam -L ref/wgs_calling_regions.hg38.interval_list -ERC GVCF -O vcf/HP01_N.g.vcf.gz
+
+gatk --java-options -Xmx32g HaplotypeCaller -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_N.bqsr.bam -L ref/wgs_calling_regions.hg38.interval_list -ERC GVCF -O vcf/HP02_N.g.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr1 --genomicsdb-workspace-path vcf/gdb_chr1
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr1 -O vcf/germline.chr1.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr2 --genomicsdb-workspace-path vcf/gdb_chr2
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr2 -O vcf/germline.chr2.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr3 --genomicsdb-workspace-path vcf/gdb_chr3
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr3 -O vcf/germline.chr3.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr4 --genomicsdb-workspace-path vcf/gdb_chr4
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr4 -O vcf/germline.chr4.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr5 --genomicsdb-workspace-path vcf/gdb_chr5
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr5 -O vcf/germline.chr5.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr6 --genomicsdb-workspace-path vcf/gdb_chr6
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr6 -O vcf/germline.chr6.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr7 --genomicsdb-workspace-path vcf/gdb_chr7
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr7 -O vcf/germline.chr7.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr8 --genomicsdb-workspace-path vcf/gdb_chr8
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr8 -O vcf/germline.chr8.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr9 --genomicsdb-workspace-path vcf/gdb_chr9
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr9 -O vcf/germline.chr9.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr10 --genomicsdb-workspace-path vcf/gdb_chr10
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr10 -O vcf/germline.chr10.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr11 --genomicsdb-workspace-path vcf/gdb_chr11
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr11 -O vcf/germline.chr11.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr12 --genomicsdb-workspace-path vcf/gdb_chr12
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr12 -O vcf/germline.chr12.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr13 --genomicsdb-workspace-path vcf/gdb_chr13
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr13 -O vcf/germline.chr13.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr14 --genomicsdb-workspace-path vcf/gdb_chr14
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr14 -O vcf/germline.chr14.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr15 --genomicsdb-workspace-path vcf/gdb_chr15
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr15 -O vcf/germline.chr15.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr16 --genomicsdb-workspace-path vcf/gdb_chr16
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr16 -O vcf/germline.chr16.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr17 --genomicsdb-workspace-path vcf/gdb_chr17
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr17 -O vcf/germline.chr17.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr18 --genomicsdb-workspace-path vcf/gdb_chr18
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr18 -O vcf/germline.chr18.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr19 --genomicsdb-workspace-path vcf/gdb_chr19
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr19 -O vcf/germline.chr19.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr20 --genomicsdb-workspace-path vcf/gdb_chr20
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr20 -O vcf/germline.chr20.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr21 --genomicsdb-workspace-path vcf/gdb_chr21
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr21 -O vcf/germline.chr21.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chr22 --genomicsdb-workspace-path vcf/gdb_chr22
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chr22 -O vcf/germline.chr22.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chrX --genomicsdb-workspace-path vcf/gdb_chrX
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chrX -O vcf/germline.chrX.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -V vcf/HP01_N.g.vcf.gz -V vcf/HP02_N.g.vcf.gz -L chrY --genomicsdb-workspace-path vcf/gdb_chrY
+
+gatk --java-options -Xmx32g GenotypeGVCFs -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/gdb_chrY -O vcf/germline.chrY.vcf.gz
+
+gatk --java-options -Xmx32g GatherVcfs -I vcf/germline.chr1.vcf.gz -I vcf/germline.chr2.vcf.gz -I vcf/germline.chr3.vcf.gz -I vcf/germline.chr4.vcf.gz -I vcf/germline.chr5.vcf.gz -I vcf/germline.chr6.vcf.gz -I vcf/germline.chr7.vcf.gz -I vcf/germline.chr8.vcf.gz -I vcf/germline.chr9.vcf.gz -I vcf/germline.chr10.vcf.gz -I vcf/germline.chr11.vcf.gz -I vcf/germline.chr12.vcf.gz -I vcf/germline.chr13.vcf.gz -I vcf/germline.chr14.vcf.gz -I vcf/germline.chr15.vcf.gz -I vcf/germline.chr16.vcf.gz -I vcf/germline.chr17.vcf.gz -I vcf/germline.chr18.vcf.gz -I vcf/germline.chr19.vcf.gz -I vcf/germline.chr20.vcf.gz -I vcf/germline.chr21.vcf.gz -I vcf/germline.chr22.vcf.gz -I vcf/germline.chrX.vcf.gz -I vcf/germline.chrY.vcf.gz -O vcf/germline.vcf.gz
+
+bcftools index -t vcf/germline.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_N.bqsr.bam -L ref/wgs_calling_regions.hg38.interval_list --max-mnp-distance 0 -O vcf/pon/HP01_N.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_N.bqsr.bam -L ref/wgs_calling_regions.hg38.interval_list --max-mnp-distance 0 -O vcf/pon/HP02_N.vcf.gz
+
+gatk --java-options -Xmx32g GenomicsDBImport -R ref/Homo_sapiens_assembly38.fasta -L ref/wgs_calling_regions.hg38.interval_list --genomicsdb-workspace-path vcf/pon_db -V vcf/pon/HP01_N.vcf.gz -V vcf/pon/HP02_N.vcf.gz
+
+gatk --java-options -Xmx32g CreateSomaticPanelOfNormals -R ref/Homo_sapiens_assembly38.fasta -V gendb://vcf/pon_db --germline-resource ref/af-only-gnomad.hg38.vcf.gz -O vcf/pon.vcf.gz
+
+gatk --java-options -Xmx32g PrintReads -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.md.bam -L chrM --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP01_H/chrM.subset.bam
+
+samtools collate -Ou mito/HP01_H/chrM.subset.bam tmp/HP01_H.mt | samtools fastq -n -0 /dev/null -s /dev/null -o mito/HP01_H/chrM.interleaved.fq.gz -
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP01_H.chrM\tSM:HP01_H\tLB:HP01_H_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.fasta mito/HP01_H/chrM.interleaved.fq.gz | samtools sort -o mito/HP01_H/chrM.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP01_H/chrM.bam -O mito/HP01_H/chrM.md.bam -M mito/HP01_H/chrM.md_metrics.txt --CREATE_INDEX true
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP01_H.chrM\tSM:HP01_H\tLB:HP01_H_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta mito/HP01_H/chrM.interleaved.fq.gz | samtools sort -o mito/HP01_H/shifted.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP01_H/shifted.bam -O mito/HP01_H/shifted.md.bam -M mito/HP01_H/shifted.md_metrics.txt --CREATE_INDEX true
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -I mito/HP01_H/chrM.md.bam -L chrM:576-16024 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP01_H/chrM.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta -I mito/HP01_H/shifted.md.bam -L chrM:8025-9144 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP01_H/shifted.vcf.gz
+
+gatk --java-options -Xmx32g LiftoverVcf -I mito/HP01_H/shifted.vcf.gz -O mito/HP01_H/shifted.lifted.vcf.gz -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta --CHAIN ref/chrM/ShiftBack.chain --REJECT mito/HP01_H/shifted.rejected.vcf.gz
+
+gatk --java-options -Xmx32g MergeVcfs -I mito/HP01_H/chrM.vcf.gz -I mito/HP01_H/shifted.lifted.vcf.gz -O mito/HP01_H/raw.vcf.gz
+
+gatk --java-options -Xmx32g MergeMutectStats -stats mito/HP01_H/chrM.vcf.gz.stats -stats mito/HP01_H/shifted.vcf.gz.stats -O mito/HP01_H/raw.vcf.gz.stats
+
+# mtDNA copies/cell = 2 * chrM_mean / autosomal_mean -> mito/HP01_H/mtcn.tsv
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_H/raw.vcf.gz --stats mito/HP01_H/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP01_H.mosdepth.summary.txt>' --contamination-estimate 0 -O mito/HP01_H/pass1.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_H/pass1.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP01_H/pass1.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_H/pass1.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP01_H/pass1.split.vcf.gz
+
+haplocheck --out mito/HP01_H/haplocheck.txt mito/HP01_H/pass1.split.vcf.gz
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_H/raw.vcf.gz --stats mito/HP01_H/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP01_H.mosdepth.summary.txt>' --contamination-estimate '<contamination level from mito/HP01_H/haplocheck.txt>' -O mito/HP01_H/final.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_H/final.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP01_H/final.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_H/final.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP01_H/final.split.vcf.gz
+
+haplogrep3 classify --in mito/HP01_H/final.split.vcf.gz --out mito/HP01_H/haplogroup.txt --tree phylotree-rcrs@17.2
+
+gatk --java-options -Xmx32g PrintReads -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_N.md.bam -L chrM --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP01_N/chrM.subset.bam
+
+samtools collate -Ou mito/HP01_N/chrM.subset.bam tmp/HP01_N.mt | samtools fastq -n -0 /dev/null -s /dev/null -o mito/HP01_N/chrM.interleaved.fq.gz -
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP01_N.chrM\tSM:HP01_N\tLB:HP01_N_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.fasta mito/HP01_N/chrM.interleaved.fq.gz | samtools sort -o mito/HP01_N/chrM.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP01_N/chrM.bam -O mito/HP01_N/chrM.md.bam -M mito/HP01_N/chrM.md_metrics.txt --CREATE_INDEX true
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP01_N.chrM\tSM:HP01_N\tLB:HP01_N_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta mito/HP01_N/chrM.interleaved.fq.gz | samtools sort -o mito/HP01_N/shifted.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP01_N/shifted.bam -O mito/HP01_N/shifted.md.bam -M mito/HP01_N/shifted.md_metrics.txt --CREATE_INDEX true
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -I mito/HP01_N/chrM.md.bam -L chrM:576-16024 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP01_N/chrM.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta -I mito/HP01_N/shifted.md.bam -L chrM:8025-9144 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP01_N/shifted.vcf.gz
+
+gatk --java-options -Xmx32g LiftoverVcf -I mito/HP01_N/shifted.vcf.gz -O mito/HP01_N/shifted.lifted.vcf.gz -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta --CHAIN ref/chrM/ShiftBack.chain --REJECT mito/HP01_N/shifted.rejected.vcf.gz
+
+gatk --java-options -Xmx32g MergeVcfs -I mito/HP01_N/chrM.vcf.gz -I mito/HP01_N/shifted.lifted.vcf.gz -O mito/HP01_N/raw.vcf.gz
+
+gatk --java-options -Xmx32g MergeMutectStats -stats mito/HP01_N/chrM.vcf.gz.stats -stats mito/HP01_N/shifted.vcf.gz.stats -O mito/HP01_N/raw.vcf.gz.stats
+
+# mtDNA copies/cell = 2 * chrM_mean / autosomal_mean -> mito/HP01_N/mtcn.tsv
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_N/raw.vcf.gz --stats mito/HP01_N/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP01_N.mosdepth.summary.txt>' --contamination-estimate 0 -O mito/HP01_N/pass1.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_N/pass1.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP01_N/pass1.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_N/pass1.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP01_N/pass1.split.vcf.gz
+
+haplocheck --out mito/HP01_N/haplocheck.txt mito/HP01_N/pass1.split.vcf.gz
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_N/raw.vcf.gz --stats mito/HP01_N/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP01_N.mosdepth.summary.txt>' --contamination-estimate '<contamination level from mito/HP01_N/haplocheck.txt>' -O mito/HP01_N/final.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_N/final.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP01_N/final.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP01_N/final.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP01_N/final.split.vcf.gz
+
+haplogrep3 classify --in mito/HP01_N/final.split.vcf.gz --out mito/HP01_N/haplogroup.txt --tree phylotree-rcrs@17.2
+
+gatk --java-options -Xmx32g PrintReads -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.md.bam -L chrM --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP02_H/chrM.subset.bam
+
+samtools collate -Ou mito/HP02_H/chrM.subset.bam tmp/HP02_H.mt | samtools fastq -n -0 /dev/null -s /dev/null -o mito/HP02_H/chrM.interleaved.fq.gz -
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP02_H.chrM\tSM:HP02_H\tLB:HP02_H_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.fasta mito/HP02_H/chrM.interleaved.fq.gz | samtools sort -o mito/HP02_H/chrM.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP02_H/chrM.bam -O mito/HP02_H/chrM.md.bam -M mito/HP02_H/chrM.md_metrics.txt --CREATE_INDEX true
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP02_H.chrM\tSM:HP02_H\tLB:HP02_H_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta mito/HP02_H/chrM.interleaved.fq.gz | samtools sort -o mito/HP02_H/shifted.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP02_H/shifted.bam -O mito/HP02_H/shifted.md.bam -M mito/HP02_H/shifted.md_metrics.txt --CREATE_INDEX true
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -I mito/HP02_H/chrM.md.bam -L chrM:576-16024 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP02_H/chrM.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta -I mito/HP02_H/shifted.md.bam -L chrM:8025-9144 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP02_H/shifted.vcf.gz
+
+gatk --java-options -Xmx32g LiftoverVcf -I mito/HP02_H/shifted.vcf.gz -O mito/HP02_H/shifted.lifted.vcf.gz -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta --CHAIN ref/chrM/ShiftBack.chain --REJECT mito/HP02_H/shifted.rejected.vcf.gz
+
+gatk --java-options -Xmx32g MergeVcfs -I mito/HP02_H/chrM.vcf.gz -I mito/HP02_H/shifted.lifted.vcf.gz -O mito/HP02_H/raw.vcf.gz
+
+gatk --java-options -Xmx32g MergeMutectStats -stats mito/HP02_H/chrM.vcf.gz.stats -stats mito/HP02_H/shifted.vcf.gz.stats -O mito/HP02_H/raw.vcf.gz.stats
+
+# mtDNA copies/cell = 2 * chrM_mean / autosomal_mean -> mito/HP02_H/mtcn.tsv
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_H/raw.vcf.gz --stats mito/HP02_H/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP02_H.mosdepth.summary.txt>' --contamination-estimate 0 -O mito/HP02_H/pass1.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_H/pass1.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP02_H/pass1.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_H/pass1.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP02_H/pass1.split.vcf.gz
+
+haplocheck --out mito/HP02_H/haplocheck.txt mito/HP02_H/pass1.split.vcf.gz
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_H/raw.vcf.gz --stats mito/HP02_H/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP02_H.mosdepth.summary.txt>' --contamination-estimate '<contamination level from mito/HP02_H/haplocheck.txt>' -O mito/HP02_H/final.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_H/final.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP02_H/final.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_H/final.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP02_H/final.split.vcf.gz
+
+haplogrep3 classify --in mito/HP02_H/final.split.vcf.gz --out mito/HP02_H/haplogroup.txt --tree phylotree-rcrs@17.2
+
+gatk --java-options -Xmx32g PrintReads -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_N.md.bam -L chrM --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP02_N/chrM.subset.bam
+
+samtools collate -Ou mito/HP02_N/chrM.subset.bam tmp/HP02_N.mt | samtools fastq -n -0 /dev/null -s /dev/null -o mito/HP02_N/chrM.interleaved.fq.gz -
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP02_N.chrM\tSM:HP02_N\tLB:HP02_N_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.fasta mito/HP02_N/chrM.interleaved.fq.gz | samtools sort -o mito/HP02_N/chrM.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP02_N/chrM.bam -O mito/HP02_N/chrM.md.bam -M mito/HP02_N/chrM.md_metrics.txt --CREATE_INDEX true
+
+bwa mem -K 100000000 -p -v 3 -t 4 -Y -R '@RG\tID:HP02_N.chrM\tSM:HP02_N\tLB:HP02_N_lib1\tPL:ILLUMINA' ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta mito/HP02_N/chrM.interleaved.fq.gz | samtools sort -o mito/HP02_N/shifted.bam -
+
+gatk --java-options -Xmx32g MarkDuplicates -I mito/HP02_N/shifted.bam -O mito/HP02_N/shifted.md.bam -M mito/HP02_N/shifted.md_metrics.txt --CREATE_INDEX true
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -I mito/HP02_N/chrM.md.bam -L chrM:576-16024 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP02_N/chrM.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/chrM/Homo_sapiens_assembly38.chrM.shifted_by_8000_bases.fasta -I mito/HP02_N/shifted.md.bam -L chrM:8025-9144 --mitochondria-mode --annotation StrandBiasBySample --max-reads-per-alignment-start 75 --max-mnp-distance 0 --read-filter MateOnSameContigOrNoMappedMateReadFilter --read-filter MateUnmappedAndUnmappedReadFilter -O mito/HP02_N/shifted.vcf.gz
+
+gatk --java-options -Xmx32g LiftoverVcf -I mito/HP02_N/shifted.vcf.gz -O mito/HP02_N/shifted.lifted.vcf.gz -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta --CHAIN ref/chrM/ShiftBack.chain --REJECT mito/HP02_N/shifted.rejected.vcf.gz
+
+gatk --java-options -Xmx32g MergeVcfs -I mito/HP02_N/chrM.vcf.gz -I mito/HP02_N/shifted.lifted.vcf.gz -O mito/HP02_N/raw.vcf.gz
+
+gatk --java-options -Xmx32g MergeMutectStats -stats mito/HP02_N/chrM.vcf.gz.stats -stats mito/HP02_N/shifted.vcf.gz.stats -O mito/HP02_N/raw.vcf.gz.stats
+
+# mtDNA copies/cell = 2 * chrM_mean / autosomal_mean -> mito/HP02_N/mtcn.tsv
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_N/raw.vcf.gz --stats mito/HP02_N/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP02_N.mosdepth.summary.txt>' --contamination-estimate 0 -O mito/HP02_N/pass1.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_N/pass1.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP02_N/pass1.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_N/pass1.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP02_N/pass1.split.vcf.gz
+
+haplocheck --out mito/HP02_N/haplocheck.txt mito/HP02_N/pass1.split.vcf.gz
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_N/raw.vcf.gz --stats mito/HP02_N/raw.vcf.gz.stats --mitochondria-mode --max-alt-allele-count 4 --min-allele-fraction 0 --autosomal-coverage '<autosomal mean from qc/HP02_N.mosdepth.summary.txt>' --contamination-estimate '<contamination level from mito/HP02_N/haplocheck.txt>' -O mito/HP02_N/final.filtered.vcf.gz
+
+gatk --java-options -Xmx32g VariantFiltration -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_N/final.filtered.vcf.gz --apply-allele-specific-filters --mask ref/chrM/blacklist_sites.hg38.chrM.bed --mask-name blacklisted_site -O mito/HP02_N/final.masked.vcf.gz
+
+gatk --java-options -Xmx32g LeftAlignAndTrimVariants -R ref/chrM/Homo_sapiens_assembly38.chrM.fasta -V mito/HP02_N/final.masked.vcf.gz --split-multi-allelics --dont-trim-alleles --keep-original-ac -O mito/HP02_N/final.split.vcf.gz
+
+haplogrep3 classify --in mito/HP02_N/final.split.vcf.gz --out mito/HP02_N/haplogroup.txt --tree phylotree-rcrs@17.2
+
+# python: recurrent heteroplasmy across 2 bloods -> mito/recurrent.tsv
+
+# python: heteroplasmy ['HP01_H'] vs HP01_N, classes + mtCN -> mito/HP01.heteroplasmy.tsv
+
+# python: heteroplasmy ['HP02_H'] vs HP02_N, classes + mtCN -> mito/HP02.heteroplasmy.tsv
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr1 --f1r2-tar-gz vcf/HP01/f1r2.chr1.tar.gz -O vcf/HP01/unf.chr1.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr2 --f1r2-tar-gz vcf/HP01/f1r2.chr2.tar.gz -O vcf/HP01/unf.chr2.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr3 --f1r2-tar-gz vcf/HP01/f1r2.chr3.tar.gz -O vcf/HP01/unf.chr3.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr4 --f1r2-tar-gz vcf/HP01/f1r2.chr4.tar.gz -O vcf/HP01/unf.chr4.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr5 --f1r2-tar-gz vcf/HP01/f1r2.chr5.tar.gz -O vcf/HP01/unf.chr5.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr6 --f1r2-tar-gz vcf/HP01/f1r2.chr6.tar.gz -O vcf/HP01/unf.chr6.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr7 --f1r2-tar-gz vcf/HP01/f1r2.chr7.tar.gz -O vcf/HP01/unf.chr7.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr8 --f1r2-tar-gz vcf/HP01/f1r2.chr8.tar.gz -O vcf/HP01/unf.chr8.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr9 --f1r2-tar-gz vcf/HP01/f1r2.chr9.tar.gz -O vcf/HP01/unf.chr9.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr10 --f1r2-tar-gz vcf/HP01/f1r2.chr10.tar.gz -O vcf/HP01/unf.chr10.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr11 --f1r2-tar-gz vcf/HP01/f1r2.chr11.tar.gz -O vcf/HP01/unf.chr11.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr12 --f1r2-tar-gz vcf/HP01/f1r2.chr12.tar.gz -O vcf/HP01/unf.chr12.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr13 --f1r2-tar-gz vcf/HP01/f1r2.chr13.tar.gz -O vcf/HP01/unf.chr13.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr14 --f1r2-tar-gz vcf/HP01/f1r2.chr14.tar.gz -O vcf/HP01/unf.chr14.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr15 --f1r2-tar-gz vcf/HP01/f1r2.chr15.tar.gz -O vcf/HP01/unf.chr15.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr16 --f1r2-tar-gz vcf/HP01/f1r2.chr16.tar.gz -O vcf/HP01/unf.chr16.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr17 --f1r2-tar-gz vcf/HP01/f1r2.chr17.tar.gz -O vcf/HP01/unf.chr17.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr18 --f1r2-tar-gz vcf/HP01/f1r2.chr18.tar.gz -O vcf/HP01/unf.chr18.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr19 --f1r2-tar-gz vcf/HP01/f1r2.chr19.tar.gz -O vcf/HP01/unf.chr19.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr20 --f1r2-tar-gz vcf/HP01/f1r2.chr20.tar.gz -O vcf/HP01/unf.chr20.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr21 --f1r2-tar-gz vcf/HP01/f1r2.chr21.tar.gz -O vcf/HP01/unf.chr21.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr22 --f1r2-tar-gz vcf/HP01/f1r2.chr22.tar.gz -O vcf/HP01/unf.chr22.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chrX --f1r2-tar-gz vcf/HP01/f1r2.chrX.tar.gz -O vcf/HP01/unf.chrX.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP01_H.bqsr.bam -I bam/HP01_N.bqsr.bam -normal HP01_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chrY --f1r2-tar-gz vcf/HP01/f1r2.chrY.tar.gz -O vcf/HP01/unf.chrY.vcf.gz
+
+gatk --java-options -Xmx32g MergeVcfs -I vcf/HP01/unf.chr1.vcf.gz -I vcf/HP01/unf.chr2.vcf.gz -I vcf/HP01/unf.chr3.vcf.gz -I vcf/HP01/unf.chr4.vcf.gz -I vcf/HP01/unf.chr5.vcf.gz -I vcf/HP01/unf.chr6.vcf.gz -I vcf/HP01/unf.chr7.vcf.gz -I vcf/HP01/unf.chr8.vcf.gz -I vcf/HP01/unf.chr9.vcf.gz -I vcf/HP01/unf.chr10.vcf.gz -I vcf/HP01/unf.chr11.vcf.gz -I vcf/HP01/unf.chr12.vcf.gz -I vcf/HP01/unf.chr13.vcf.gz -I vcf/HP01/unf.chr14.vcf.gz -I vcf/HP01/unf.chr15.vcf.gz -I vcf/HP01/unf.chr16.vcf.gz -I vcf/HP01/unf.chr17.vcf.gz -I vcf/HP01/unf.chr18.vcf.gz -I vcf/HP01/unf.chr19.vcf.gz -I vcf/HP01/unf.chr20.vcf.gz -I vcf/HP01/unf.chr21.vcf.gz -I vcf/HP01/unf.chr22.vcf.gz -I vcf/HP01/unf.chrX.vcf.gz -I vcf/HP01/unf.chrY.vcf.gz -O vcf/HP01/unfiltered.vcf.gz
+
+gatk --java-options -Xmx32g MergeMutectStats -stats vcf/HP01/unf.chr1.vcf.gz.stats -stats vcf/HP01/unf.chr2.vcf.gz.stats -stats vcf/HP01/unf.chr3.vcf.gz.stats -stats vcf/HP01/unf.chr4.vcf.gz.stats -stats vcf/HP01/unf.chr5.vcf.gz.stats -stats vcf/HP01/unf.chr6.vcf.gz.stats -stats vcf/HP01/unf.chr7.vcf.gz.stats -stats vcf/HP01/unf.chr8.vcf.gz.stats -stats vcf/HP01/unf.chr9.vcf.gz.stats -stats vcf/HP01/unf.chr10.vcf.gz.stats -stats vcf/HP01/unf.chr11.vcf.gz.stats -stats vcf/HP01/unf.chr12.vcf.gz.stats -stats vcf/HP01/unf.chr13.vcf.gz.stats -stats vcf/HP01/unf.chr14.vcf.gz.stats -stats vcf/HP01/unf.chr15.vcf.gz.stats -stats vcf/HP01/unf.chr16.vcf.gz.stats -stats vcf/HP01/unf.chr17.vcf.gz.stats -stats vcf/HP01/unf.chr18.vcf.gz.stats -stats vcf/HP01/unf.chr19.vcf.gz.stats -stats vcf/HP01/unf.chr20.vcf.gz.stats -stats vcf/HP01/unf.chr21.vcf.gz.stats -stats vcf/HP01/unf.chr22.vcf.gz.stats -stats vcf/HP01/unf.chrX.vcf.gz.stats -stats vcf/HP01/unf.chrY.vcf.gz.stats -O vcf/HP01/unfiltered.vcf.gz.stats
+
+gatk --java-options -Xmx32g LearnReadOrientationModel -I vcf/HP01/f1r2.chr1.tar.gz -I vcf/HP01/f1r2.chr2.tar.gz -I vcf/HP01/f1r2.chr3.tar.gz -I vcf/HP01/f1r2.chr4.tar.gz -I vcf/HP01/f1r2.chr5.tar.gz -I vcf/HP01/f1r2.chr6.tar.gz -I vcf/HP01/f1r2.chr7.tar.gz -I vcf/HP01/f1r2.chr8.tar.gz -I vcf/HP01/f1r2.chr9.tar.gz -I vcf/HP01/f1r2.chr10.tar.gz -I vcf/HP01/f1r2.chr11.tar.gz -I vcf/HP01/f1r2.chr12.tar.gz -I vcf/HP01/f1r2.chr13.tar.gz -I vcf/HP01/f1r2.chr14.tar.gz -I vcf/HP01/f1r2.chr15.tar.gz -I vcf/HP01/f1r2.chr16.tar.gz -I vcf/HP01/f1r2.chr17.tar.gz -I vcf/HP01/f1r2.chr18.tar.gz -I vcf/HP01/f1r2.chr19.tar.gz -I vcf/HP01/f1r2.chr20.tar.gz -I vcf/HP01/f1r2.chr21.tar.gz -I vcf/HP01/f1r2.chr22.tar.gz -I vcf/HP01/f1r2.chrX.tar.gz -I vcf/HP01/f1r2.chrY.tar.gz -O vcf/HP01/rom.tar.gz
+
+gatk --java-options -Xmx32g GetPileupSummaries -I bam/HP01_H.bqsr.bam -V ref/small_exac_common_3.hg38.vcf.gz -L ref/small_exac_common_3.hg38.vcf.gz -O vcf/HP01/HP01_H.pileups.table
+
+gatk --java-options -Xmx32g GetPileupSummaries -I bam/HP01_N.bqsr.bam -V ref/small_exac_common_3.hg38.vcf.gz -L ref/small_exac_common_3.hg38.vcf.gz -O vcf/HP01/HP01_N.pileups.table
+
+gatk --java-options -Xmx32g CalculateContamination -I vcf/HP01/HP01_H.pileups.table -matched vcf/HP01/HP01_N.pileups.table --tumor-segmentation vcf/HP01/HP01_H.segments.table -O vcf/HP01/HP01_H.contamination.table
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/Homo_sapiens_assembly38.fasta -V vcf/HP01/unfiltered.vcf.gz --contamination-table vcf/HP01/HP01_H.contamination.table --tumor-segmentation vcf/HP01/HP01_H.segments.table --ob-priors vcf/HP01/rom.tar.gz -O vcf/HP01/mutect2.filtered.vcf.gz
+
+bcftools view -f PASS vcf/HP01/mutect2.filtered.vcf.gz -Oz -o vcf/HP01/mutect2.pass.vcf.gz
+
+bcftools index -t vcf/HP01/mutect2.pass.vcf.gz
+
+configManta.py --normalBam bam/HP01_N.bqsr.bam --tumorBam bam/HP01_H.bqsr.bam --referenceFasta ref/Homo_sapiens_assembly38.fasta --runDir sv/HP01_H/manta
+
+sv/HP01_H/manta/runWorkflow.py -m local -j 16
+
+configureStrelkaSomaticWorkflow.py --normalBam bam/HP01_N.bqsr.bam --tumorBam bam/HP01_H.bqsr.bam --referenceFasta ref/Homo_sapiens_assembly38.fasta --indelCandidates sv/HP01_H/manta/results/variants/candidateSmallIndels.vcf.gz --runDir sv/HP01_H/strelka
+
+sv/HP01_H/strelka/runWorkflow.py -m local -j 16
+
+delly call -x ref/delly/human.hg38.excl.tsv -g ref/Homo_sapiens_assembly38.fasta -o sv/HP01_H/delly.bcf bam/HP01_H.bqsr.bam bam/HP01_N.bqsr.bam
+
+# write sv/HP01_H/delly_samples.tsv:
+HP01_H	tumor
+HP01_N	control
+
+delly filter -f somatic -s sv/HP01_H/delly_samples.tsv -o sv/HP01_H/delly.somatic.bcf sv/HP01_H/delly.bcf
+
+bcftools view -f PASS sv/HP01_H/manta/results/variants/somaticSV.vcf.gz -Ov -o sv/HP01_H/manta.vcf
+
+bcftools view -f PASS sv/HP01_H/delly.somatic.bcf -Ov -o sv/HP01_H/delly.vcf
+
+# write sv/HP01_H/sv_list.txt:
+sv/HP01_H/manta.vcf
+sv/HP01_H/delly.vcf
+
+SURVIVOR merge sv/HP01_H/sv_list.txt 1000 2 1 1 0 50 sv/HP01_H/sv.consensus.vcf
+
+vep --offline --cache --dir_cache ref/vep_cache --assembly GRCh38 --fasta ref/Homo_sapiens_assembly38.fasta --everything --pick --vcf --compress_output bgzip --fork 8 -i vcf/HP01/mutect2.pass.vcf.gz -o vcf/HP01/mutect2.pass.vep.vcf.gz
+
+bash -c 'bcftools +split-vep vcf/HP01/mutect2.pass.vep.vcf.gz -d -f '"'"'%CHROM\t%POS\t%REF\t%ALT\t%SYMBOL\t%Consequence\t%HGVSp\t%IMPACT[\t%SAMPLE=%AD]\n'"'"' -i '"'"'SYMBOL~"^(SPOP|FOXA1|TP53|PTEN|RB1|CHD1|NKX3-1|MYC|AR|BRCA1|BRCA2|ATM|CDK12|PALB2|CHEK2|HOXB13|KMT2C|KMT2D|IDH1|CTNNB1|PIK3CA|APC|SPEN|ZMYM3|MED12|MLH1|MSH2|MSH6|PMS2|ERG|ETV1|ETV4|TMPRSS2)$" && IMPACT~"HIGH|MODERATE"'"'"' > drivers/HP01.snv_indel.tsv'
+
+bash -c 'bcftools view -t chr21:38300000-41600000 sv/HP01_H/sv.consensus.vcf | bcftools query -f '"'"'%CHROM\t%POS\t%INFO/SVTYPE\t%INFO/END\t%ALT\n'"'"' > drivers/HP01_H.tmprss2_erg.tsv'
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr1 --f1r2-tar-gz vcf/HP02/f1r2.chr1.tar.gz -O vcf/HP02/unf.chr1.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr2 --f1r2-tar-gz vcf/HP02/f1r2.chr2.tar.gz -O vcf/HP02/unf.chr2.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr3 --f1r2-tar-gz vcf/HP02/f1r2.chr3.tar.gz -O vcf/HP02/unf.chr3.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr4 --f1r2-tar-gz vcf/HP02/f1r2.chr4.tar.gz -O vcf/HP02/unf.chr4.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr5 --f1r2-tar-gz vcf/HP02/f1r2.chr5.tar.gz -O vcf/HP02/unf.chr5.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr6 --f1r2-tar-gz vcf/HP02/f1r2.chr6.tar.gz -O vcf/HP02/unf.chr6.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr7 --f1r2-tar-gz vcf/HP02/f1r2.chr7.tar.gz -O vcf/HP02/unf.chr7.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr8 --f1r2-tar-gz vcf/HP02/f1r2.chr8.tar.gz -O vcf/HP02/unf.chr8.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr9 --f1r2-tar-gz vcf/HP02/f1r2.chr9.tar.gz -O vcf/HP02/unf.chr9.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr10 --f1r2-tar-gz vcf/HP02/f1r2.chr10.tar.gz -O vcf/HP02/unf.chr10.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr11 --f1r2-tar-gz vcf/HP02/f1r2.chr11.tar.gz -O vcf/HP02/unf.chr11.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr12 --f1r2-tar-gz vcf/HP02/f1r2.chr12.tar.gz -O vcf/HP02/unf.chr12.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr13 --f1r2-tar-gz vcf/HP02/f1r2.chr13.tar.gz -O vcf/HP02/unf.chr13.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr14 --f1r2-tar-gz vcf/HP02/f1r2.chr14.tar.gz -O vcf/HP02/unf.chr14.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr15 --f1r2-tar-gz vcf/HP02/f1r2.chr15.tar.gz -O vcf/HP02/unf.chr15.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr16 --f1r2-tar-gz vcf/HP02/f1r2.chr16.tar.gz -O vcf/HP02/unf.chr16.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr17 --f1r2-tar-gz vcf/HP02/f1r2.chr17.tar.gz -O vcf/HP02/unf.chr17.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr18 --f1r2-tar-gz vcf/HP02/f1r2.chr18.tar.gz -O vcf/HP02/unf.chr18.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr19 --f1r2-tar-gz vcf/HP02/f1r2.chr19.tar.gz -O vcf/HP02/unf.chr19.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr20 --f1r2-tar-gz vcf/HP02/f1r2.chr20.tar.gz -O vcf/HP02/unf.chr20.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr21 --f1r2-tar-gz vcf/HP02/f1r2.chr21.tar.gz -O vcf/HP02/unf.chr21.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chr22 --f1r2-tar-gz vcf/HP02/f1r2.chr22.tar.gz -O vcf/HP02/unf.chr22.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chrX --f1r2-tar-gz vcf/HP02/f1r2.chrX.tar.gz -O vcf/HP02/unf.chrX.vcf.gz
+
+gatk --java-options -Xmx32g Mutect2 -R ref/Homo_sapiens_assembly38.fasta -I bam/HP02_H.bqsr.bam -I bam/HP02_N.bqsr.bam -normal HP02_N --germline-resource ref/af-only-gnomad.hg38.vcf.gz --panel-of-normals vcf/pon.vcf.gz -L chrY --f1r2-tar-gz vcf/HP02/f1r2.chrY.tar.gz -O vcf/HP02/unf.chrY.vcf.gz
+
+gatk --java-options -Xmx32g MergeVcfs -I vcf/HP02/unf.chr1.vcf.gz -I vcf/HP02/unf.chr2.vcf.gz -I vcf/HP02/unf.chr3.vcf.gz -I vcf/HP02/unf.chr4.vcf.gz -I vcf/HP02/unf.chr5.vcf.gz -I vcf/HP02/unf.chr6.vcf.gz -I vcf/HP02/unf.chr7.vcf.gz -I vcf/HP02/unf.chr8.vcf.gz -I vcf/HP02/unf.chr9.vcf.gz -I vcf/HP02/unf.chr10.vcf.gz -I vcf/HP02/unf.chr11.vcf.gz -I vcf/HP02/unf.chr12.vcf.gz -I vcf/HP02/unf.chr13.vcf.gz -I vcf/HP02/unf.chr14.vcf.gz -I vcf/HP02/unf.chr15.vcf.gz -I vcf/HP02/unf.chr16.vcf.gz -I vcf/HP02/unf.chr17.vcf.gz -I vcf/HP02/unf.chr18.vcf.gz -I vcf/HP02/unf.chr19.vcf.gz -I vcf/HP02/unf.chr20.vcf.gz -I vcf/HP02/unf.chr21.vcf.gz -I vcf/HP02/unf.chr22.vcf.gz -I vcf/HP02/unf.chrX.vcf.gz -I vcf/HP02/unf.chrY.vcf.gz -O vcf/HP02/unfiltered.vcf.gz
+
+gatk --java-options -Xmx32g MergeMutectStats -stats vcf/HP02/unf.chr1.vcf.gz.stats -stats vcf/HP02/unf.chr2.vcf.gz.stats -stats vcf/HP02/unf.chr3.vcf.gz.stats -stats vcf/HP02/unf.chr4.vcf.gz.stats -stats vcf/HP02/unf.chr5.vcf.gz.stats -stats vcf/HP02/unf.chr6.vcf.gz.stats -stats vcf/HP02/unf.chr7.vcf.gz.stats -stats vcf/HP02/unf.chr8.vcf.gz.stats -stats vcf/HP02/unf.chr9.vcf.gz.stats -stats vcf/HP02/unf.chr10.vcf.gz.stats -stats vcf/HP02/unf.chr11.vcf.gz.stats -stats vcf/HP02/unf.chr12.vcf.gz.stats -stats vcf/HP02/unf.chr13.vcf.gz.stats -stats vcf/HP02/unf.chr14.vcf.gz.stats -stats vcf/HP02/unf.chr15.vcf.gz.stats -stats vcf/HP02/unf.chr16.vcf.gz.stats -stats vcf/HP02/unf.chr17.vcf.gz.stats -stats vcf/HP02/unf.chr18.vcf.gz.stats -stats vcf/HP02/unf.chr19.vcf.gz.stats -stats vcf/HP02/unf.chr20.vcf.gz.stats -stats vcf/HP02/unf.chr21.vcf.gz.stats -stats vcf/HP02/unf.chr22.vcf.gz.stats -stats vcf/HP02/unf.chrX.vcf.gz.stats -stats vcf/HP02/unf.chrY.vcf.gz.stats -O vcf/HP02/unfiltered.vcf.gz.stats
+
+gatk --java-options -Xmx32g LearnReadOrientationModel -I vcf/HP02/f1r2.chr1.tar.gz -I vcf/HP02/f1r2.chr2.tar.gz -I vcf/HP02/f1r2.chr3.tar.gz -I vcf/HP02/f1r2.chr4.tar.gz -I vcf/HP02/f1r2.chr5.tar.gz -I vcf/HP02/f1r2.chr6.tar.gz -I vcf/HP02/f1r2.chr7.tar.gz -I vcf/HP02/f1r2.chr8.tar.gz -I vcf/HP02/f1r2.chr9.tar.gz -I vcf/HP02/f1r2.chr10.tar.gz -I vcf/HP02/f1r2.chr11.tar.gz -I vcf/HP02/f1r2.chr12.tar.gz -I vcf/HP02/f1r2.chr13.tar.gz -I vcf/HP02/f1r2.chr14.tar.gz -I vcf/HP02/f1r2.chr15.tar.gz -I vcf/HP02/f1r2.chr16.tar.gz -I vcf/HP02/f1r2.chr17.tar.gz -I vcf/HP02/f1r2.chr18.tar.gz -I vcf/HP02/f1r2.chr19.tar.gz -I vcf/HP02/f1r2.chr20.tar.gz -I vcf/HP02/f1r2.chr21.tar.gz -I vcf/HP02/f1r2.chr22.tar.gz -I vcf/HP02/f1r2.chrX.tar.gz -I vcf/HP02/f1r2.chrY.tar.gz -O vcf/HP02/rom.tar.gz
+
+gatk --java-options -Xmx32g GetPileupSummaries -I bam/HP02_H.bqsr.bam -V ref/small_exac_common_3.hg38.vcf.gz -L ref/small_exac_common_3.hg38.vcf.gz -O vcf/HP02/HP02_H.pileups.table
+
+gatk --java-options -Xmx32g GetPileupSummaries -I bam/HP02_N.bqsr.bam -V ref/small_exac_common_3.hg38.vcf.gz -L ref/small_exac_common_3.hg38.vcf.gz -O vcf/HP02/HP02_N.pileups.table
+
+gatk --java-options -Xmx32g CalculateContamination -I vcf/HP02/HP02_H.pileups.table -matched vcf/HP02/HP02_N.pileups.table --tumor-segmentation vcf/HP02/HP02_H.segments.table -O vcf/HP02/HP02_H.contamination.table
+
+gatk --java-options -Xmx32g FilterMutectCalls -R ref/Homo_sapiens_assembly38.fasta -V vcf/HP02/unfiltered.vcf.gz --contamination-table vcf/HP02/HP02_H.contamination.table --tumor-segmentation vcf/HP02/HP02_H.segments.table --ob-priors vcf/HP02/rom.tar.gz -O vcf/HP02/mutect2.filtered.vcf.gz
+
+bcftools view -f PASS vcf/HP02/mutect2.filtered.vcf.gz -Oz -o vcf/HP02/mutect2.pass.vcf.gz
+
+bcftools index -t vcf/HP02/mutect2.pass.vcf.gz
+
+configManta.py --normalBam bam/HP02_N.bqsr.bam --tumorBam bam/HP02_H.bqsr.bam --referenceFasta ref/Homo_sapiens_assembly38.fasta --runDir sv/HP02_H/manta
+
+sv/HP02_H/manta/runWorkflow.py -m local -j 16
+
+configureStrelkaSomaticWorkflow.py --normalBam bam/HP02_N.bqsr.bam --tumorBam bam/HP02_H.bqsr.bam --referenceFasta ref/Homo_sapiens_assembly38.fasta --indelCandidates sv/HP02_H/manta/results/variants/candidateSmallIndels.vcf.gz --runDir sv/HP02_H/strelka
+
+sv/HP02_H/strelka/runWorkflow.py -m local -j 16
+
+delly call -x ref/delly/human.hg38.excl.tsv -g ref/Homo_sapiens_assembly38.fasta -o sv/HP02_H/delly.bcf bam/HP02_H.bqsr.bam bam/HP02_N.bqsr.bam
+
+# write sv/HP02_H/delly_samples.tsv:
+HP02_H	tumor
+HP02_N	control
+
+delly filter -f somatic -s sv/HP02_H/delly_samples.tsv -o sv/HP02_H/delly.somatic.bcf sv/HP02_H/delly.bcf
+
+bcftools view -f PASS sv/HP02_H/manta/results/variants/somaticSV.vcf.gz -Ov -o sv/HP02_H/manta.vcf
+
+bcftools view -f PASS sv/HP02_H/delly.somatic.bcf -Ov -o sv/HP02_H/delly.vcf
+
+# write sv/HP02_H/sv_list.txt:
+sv/HP02_H/manta.vcf
+sv/HP02_H/delly.vcf
+
+SURVIVOR merge sv/HP02_H/sv_list.txt 1000 2 1 1 0 50 sv/HP02_H/sv.consensus.vcf
+
+vep --offline --cache --dir_cache ref/vep_cache --assembly GRCh38 --fasta ref/Homo_sapiens_assembly38.fasta --everything --pick --vcf --compress_output bgzip --fork 8 -i vcf/HP02/mutect2.pass.vcf.gz -o vcf/HP02/mutect2.pass.vep.vcf.gz
+
+bash -c 'bcftools +split-vep vcf/HP02/mutect2.pass.vep.vcf.gz -d -f '"'"'%CHROM\t%POS\t%REF\t%ALT\t%SYMBOL\t%Consequence\t%HGVSp\t%IMPACT[\t%SAMPLE=%AD]\n'"'"' -i '"'"'SYMBOL~"^(SPOP|FOXA1|TP53|PTEN|RB1|CHD1|NKX3-1|MYC|AR|BRCA1|BRCA2|ATM|CDK12|PALB2|CHEK2|HOXB13|KMT2C|KMT2D|IDH1|CTNNB1|PIK3CA|APC|SPEN|ZMYM3|MED12|MLH1|MSH2|MSH6|PMS2|ERG|ETV1|ETV4|TMPRSS2)$" && IMPACT~"HIGH|MODERATE"'"'"' > drivers/HP02.snv_indel.tsv'
+
+bash -c 'bcftools view -t chr21:38300000-41600000 sv/HP02_H/sv.consensus.vcf | bcftools query -f '"'"'%CHROM\t%POS\t%INFO/SVTYPE\t%INFO/END\t%ALT\n'"'"' > drivers/HP02_H.tmprss2_erg.tsv'
+
+bcftools view -s HP01_H vcf/HP01/mutect2.pass.vcf.gz | bcftools view -i 'FMT/AD[0:1]>=3' -Ov -o sig/vcfs/HP01_H.vcf
+
+bcftools view -s HP02_H vcf/HP02/mutect2.pass.vcf.gz | bcftools view -i 'FMT/AD[0:1]>=3' -Ov -o sig/vcfs/HP02_H.vcf
+
+# SigProfilerAssignment.cosmic_fit(samples='sig/vcfs', output='sig/out', input_type='vcf', genome_build='GRCh38')
+

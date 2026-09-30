@@ -1,0 +1,16 @@
+# ASCAT (copy number, purity, ploidy). ASCAT itself is installed from GitHub
+# by setup_envs.sh; this env provides R, its dependencies and alleleCounter.
+name: ascat
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base>=4.2
+  - r-remotes
+  - r-data.table
+  - r-rcolorbrewer
+  - r-foreach
+  - r-doparallel
+  - bioconductor-genomicranges
+  - bioconductor-iranges
+  - cancerit-allelecount     # provides the alleleCounter binary ASCAT calls
